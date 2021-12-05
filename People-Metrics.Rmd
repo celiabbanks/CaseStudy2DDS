@@ -1,0 +1,635 @@
+---
+title: "People-Metrics"
+author: "Celia Banks"
+date: "11/27/2021"
+output: html_document
+runtime: shiny
+---
+```{r setup, include=FALSE}
+#knitr::opts_chunk$set( echo = TRUE, message=FALSE, warning=FALSE, fig.width=8 )
+knitr::opts_chunk$set( echo = TRUE, message=FALSE, warning=FALSE )
+
+```
+## Establish Libraries
+```{r}
+library(caret)
+library(class)
+library(dplyr)
+library(e1071)
+library(Hmisc)
+library(ISLR)
+library(knitr)
+library(leaps)
+library(MASS)
+library(readr)
+library(stats)
+library(tidyverse)
+library(xlsx)
+
+```
+### Libraries for visualization techniques 
+```{r}
+library(ggplot2)
+library(plotly)
+library(lattice)
+library(GGally)
+library(ggthemes)
+library(geofacet) #for geographic-based facets
+library(gridExtra)
+library(naniar) #for plotting missing values
+```
+## Prepare Data
+
+```{r}
+### read in dataset
+### added Type column to create beer types as factors later on
+attrition <- read.xlsx(file="CaseStudy2-newdata.xlsx", sheetIndex = 1,   header=TRUE, stringsAsFactors = FALSE)
+
+## View(attrition)
+head(attrition, 10)
+
+## identify column names
+names(attrition)
+```
+## Visualizations - Histograms of independent variables for firsthand view of data distribution and relationships
+```{r}
+## Histogram panels of various variable pairings:
+
+## set colors
+my.color<-c("#a1d99b","#31a354","#fc9272","#de2d26")
+```
+### Distribution of Age vs Gender and Attrition
+```{r}
+
+## get attrition by gender and age
+ag <- ggplot(attrition, aes(x=Age,fill=paste(Gender,Attrition)))
+ag + geom_histogram(binwidth = .5)+
+  facet_grid(Gender~Attrition)+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.title.x = element_text(size=12, colour = 'black'),
+        axis.title.y = element_text(size=12, colour = 'black'),
+        axis.line = element_line(colour='black'))+
+    labs(x='Employee Age',y='Frequency')+
+  scale_fill_manual(name="Age and Attrition",values=my.color)
+
+```
+```{r}
+```
+
+### Distribution of Attrition by Job Satisfaction and Gender
+
+```{r}
+## set colors
+my2.color<-c("#73c2fb","#609fcc","#4e7da0","#3c5c75")
+
+## get attrition by gender and job satisfaction
+jbs <- ggplot(attrition, aes(x=JobSatisfaction,fill=paste(Gender,Attrition)))
+jbs + geom_histogram(binwidth = .5)+
+  facet_grid(Gender~Attrition)+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.title.x = element_text(size=12, colour = 'black'),
+        axis.title.y = element_text(size=12, colour = 'black'),
+        axis.line = element_line(colour='black'))+
+    labs(x='Employee Job Satisfaction',y='Frequency')+
+  scale_fill_manual(name="Job Satisfaction and Attrition",values=my2.color)
+
+```
+```{r}
+
+```
+
+### Distribution of Attrition by Performance Rating and Age
+
+```{r}
+## set colors
+my3.color<-c("#ffa07a","#e9967a","#cac3bb","#8b8680")
+
+## get attrition by age and performance rating
+prf <- ggplot(attrition, aes(x=Age,fill=paste(PerformanceRating,Attrition)))
+prf + geom_histogram(binwidth = .5)+
+  facet_grid(PerformanceRating~Attrition)+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.title.x = element_text(size=12, colour = 'black'),
+        axis.title.y = element_text(size=12, colour = 'black'),
+        axis.line = element_line(colour='black'))+
+    labs(x='Age',y='Frequency')+
+  scale_fill_manual(name="Performance Rating and Attrition",values=my3.color)
+
+
+```
+
+### Distribution of Attrition by Job Involvement and Age
+
+```{r}
+## set colors
+my4.color<-c("#ba160c","#f38fa9","#4da455","#a4d4a9","#72366c","#af56a7","#ff5cb8","#ffa9df")
+
+## get attrition by age and job involvement
+jiv <- ggplot(attrition, aes(x=Age,fill=paste(JobInvolvement,Attrition)))
+jiv + geom_histogram(binwidth = .5)+
+  facet_grid(JobInvolvement~Attrition)+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.title.x = element_text(size=12, colour = 'black'),
+        axis.title.y = element_text(size=12, colour = 'black'),
+        axis.line = element_line(colour='black'))+
+    labs(x='Age',y='Frequency')+
+  scale_fill_manual(name="Job Involvement and Attrition",values=my4.color)
+
+```
+
+### Distribution of Attrition by Employee Relationships and Gender
+
+```{r}
+## set colors
+my5.color<-c("#ba160c","#f38fa9","#4da455","#a4d4a9","#72366c","#af56a7","#ff5cb8","#ffa9df")
+
+## get attrition by gender and relationship satisfaction
+relate <- ggplot(attrition, aes(x=RelationshipSatisfaction,fill=paste(Gender,Attrition)))
+relate + geom_histogram(binwidth = .5)+
+  facet_grid(RelationshipSatisfaction~Attrition)+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.title.x = element_text(size=12, colour = 'black'),
+        axis.title.y = element_text(size=12, colour = 'black'),
+        axis.line = element_line(colour='black'))+
+    labs(x='Employee Relationship',y='Frequency')+
+  scale_fill_manual(name="Relationship and Attrition",values=my5.color)
+
+```
+
+### Distribution of Attrition by Distance from Home and Gender
+
+
+```{r}
+## set colors
+my7.color<-c("#c8c8c8","#5f5f5f","#c5b358","#ffcc33")
+
+## get attrition by gender and commute (distance from home)
+commute <- ggplot(attrition, aes(x=DistanceFromHome,fill=paste(Gender,Attrition)))
+commute + geom_histogram(binwidth = .5)+
+  facet_grid(Gender~Attrition)+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.title.x = element_text(size=12, colour = 'black'),
+        axis.title.y = element_text(size=12, colour = 'black'),
+        axis.line = element_line(colour='black'))+
+    labs(x='Distance from Home',y='Frequency')+
+  scale_fill_manual(name="Commute and Attrition",values=my7.color)
+
+```
+```{r}
+## set colors
+my9.color<-c("#ba160c","#f38fa9","#4da455","#a4d4a9","#72366c","#af56a7")
+
+## get attrition by gender and work life balance
+worklife <- ggplot(attrition, aes(x=WorkLifeBalance,fill=paste(Gender,Attrition)))
+worklife + geom_histogram(binwidth = .5)+
+  facet_grid(WorkLifeBalance~Attrition)+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.title.x = element_text(size=12, colour = 'black'),
+        axis.title.y = element_text(size=12, colour = 'black'),
+        axis.line = element_line(colour='black'))+
+    labs(x='Work Life Balance',y='Frequency')+
+  scale_fill_manual(name="Work Life Balance and Attrition",values=my9.color)
+```
+```{r}
+## set colors
+my10.color<-c("#ba160c","#f38fa9","#4da455","#a4d4a9","#72366c","#af56a7","#ff5cb8","#ffa9df","#00d7ff","#00c3e3","#9f00ff","#cc99cc","#00e26b","#1cff87","#e28b00","#ffa71c","#0046b6","#4169e1")
+
+## get attrition by gender and stock option level
+relate <- ggplot(attrition, aes(x=StockOptionLevel,fill=paste(Gender,Attrition)))
+relate + geom_histogram(binwidth = .5)+
+  facet_grid(StockOptionLevel~Attrition)+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.title.x = element_text(size=12, colour = 'black'),
+        axis.title.y = element_text(size=12, colour = 'black'),
+        axis.line = element_line(colour='black'))+
+    labs(x='Stock Option Level',y='Frequency')+
+  scale_fill_manual(name="Stock Option Level and Attrition",values=my10.color)
+
+```
+
+
+```{r}
+
+
+## Scatter plot quick check for various variable pairings:
+
+library(ggplot2);
+ggplot(attrition, aes(YearsSinceLastPromotion,Age)) + 
+    geom_point() + 
+    labs(y = "Age", x = "Years Since Last Promotion");
+
+
+```
+
+### Linear Modelling to Determine Relationships and Interactions
+
+
+```{r}
+## Conduct stepwise regression entering one explanatory variable at a time
+## against ~10 response variables. At end of stepwise regression, 
+## conduct an ANOVA
+
+## relevant libraries for stepwise regression are:
+## library(tidyverse)
+## library(caret)
+## library(leaps)
+## library(MASS)
+
+
+###########################################
+## troubleshooting comments - do not remove
+## full model fit
+#full.model <- lm(Attrition ~., data=attrition)
+
+## received error when trying to run on full model:
+## Error in `contrasts<-`(`*tmp*`, value = contr.funs[1 + isOF[nn]]) : 
+## contrasts can be applied only to factors with 2 or more levels
+
+## count unique values for each variable
+#sapply(lapply(attrition, unique), length)
+
+## shows that variables Over18 and StandardHours have only 1 value. These variables should be removed from the data as they are not needed in the analysis
+###########################################
+
+
+## Drop Over18 and StandardHours columns as not needed
+drop <- c("Over18","StandardHours")
+attrition = attrition[,!(names(attrition) %in% drop)]
+
+## Optional - drop other variables not needed in model
+drop2 <- c("EnvironmentSatisfaction","MaritalStatus",
+          "OverTime","EmployeeNumber")
+attrition = attrition[,!(names(attrition) %in% drop2)]
+
+## Full model run error encountered. check for missing values 
+library(naniar)
+vis_miss(attrition)
+```
+
+### Stepwise regression of various variables to identify best ones
+
+```{r}
+
+## Try a variable having more than 2 values
+full.model <- lm(JobSatisfaction ~., data=attrition)
+summary(full.model)
+
+## stepwise regression model to get best variables to include in model
+step.model <- stepAIC(full.model,trace=FALSE)
+summary(step.model)
+## Remarks:
+## There is a strong association of Job Satisfaction with Attrition,
+## YearsAtCompany may be an interaction/confounding variable
+## Low R-square may not be one of 3 significant factor
+```
+
+### Repeat for each variable under consideration
+
+```{r}
+full.model <- lm(YearsAtCompany ~., data=attrition)
+summary(full.model)
+
+step.model <- stepAIC(full.model,trace=FALSE)
+summary(step.model)
+## Remarks:
+## Although no association shows up with Attrition,
+## YearsAtCompany may be an interaction variable
+## It is a strong variable associating with other explanatory vars
+## may be one of 3 significant factors
+```
+```{r}
+full.model <- lm(JobInvolvement ~., data=attrition)
+summary(full.model)
+
+step.model <- stepAIC(full.model,trace=FALSE)
+summary(step.model)
+## Remarks:
+## There is strong association of Job Involvement with Attrition,
+## Also strong association with other key vars contributing to Attrition
+## may be an interaction variable and could be considered a confounder
+```
+```{r}
+full.model <- lm(PerformanceRating ~., data=attrition)
+summary(full.model)
+
+step.model <- stepAIC(full.model,trace=FALSE)
+summary(step.model)
+## Remarks:
+## No association with any variables
+
+```
+```{r}
+
+full.model <- lm(DistanceFromHome ~., data=attrition)
+summary(full.model)
+
+step.model <- stepAIC(full.model,trace=FALSE)
+summary(step.model)
+## Remarks:
+## Weak association with Attrition and with very few
+## other variables as indicated by r-squared
+## can remove this variable from model without concern for confounding
+```
+```{r}
+
+full.model <- lm(TrainingTimesLastYear ~., data=attrition)
+summary(full.model)
+
+step.model <- stepAIC(full.model,trace=FALSE)
+summary(step.model)
+## Remarks:
+## Weak association with Attrition and with very few
+## other variables as indicated by r-squared
+```
+```{r}
+
+full.model <- lm(Education ~., data=attrition)
+summary(full.model)
+
+step.model <- stepAIC(full.model,trace=FALSE)
+summary(step.model)
+## Remarks:
+## No association with Attrition but some association with 
+## variable of job role as would be expected
+```
+```{r}
+
+full.model <- lm(Age ~., data=attrition)
+summary(full.model)
+
+step.model <- stepAIC(full.model,trace=FALSE)
+summary(step.model)
+## Remarks:
+## Strong association with Attrition and other 
+## variables and can be a confounding variable
+## may be a significant factor
+```
+```{r}
+
+full.model <- lm(RelationshipSatisfaction ~., data=attrition)
+summary(full.model)
+
+step.model <- stepAIC(full.model,trace=FALSE)
+summary(step.model)
+## Remarks:
+## Weak association with Attrition and with very few
+## other variables as indicated by r-squared
+## can remove this variable from model without concern for confounding
+```
+```{r}
+
+full.model <- lm(YearsSinceLastPromotion ~., data=attrition)
+summary(full.model)
+
+step.model <- stepAIC(full.model,trace=FALSE)
+summary(step.model)
+## Remarks:
+## Strong association with Attrition and with few
+## other variables relating to time and job level
+## may be one of 3 chosen as significant factor
+```
+```{r}
+
+full.model <- lm(StockOptionLevel ~., data=attrition)
+summary(full.model)
+
+step.model <- stepAIC(full.model,trace=FALSE)
+summary(step.model)
+## Remarks:
+## Strong association with Attrition and with few
+## other variables relating to years at company and
+## in job role. Not sure of its association with
+## with commute distance
+```
+```{r}
+
+full.model <- lm(WorkLifeBalance ~., data=attrition)
+summary(full.model)
+
+step.model <- stepAIC(full.model,trace=FALSE)
+summary(step.model)
+## Remarks:
+## Strong association with Attrition and with few
+## other variables. Interesting association with two
+## key departments in company. Also associated with
+## time - years in company and in current role
+## Low R-square will place it as one of 3 significant factor
+```
+```{r}
+
+full.model <- lm(YearsInCurrentRole ~., data=attrition)
+summary(full.model)
+
+step.model <- stepAIC(full.model,trace=FALSE)
+summary(step.model)
+## Remarks:
+## Very strong association with Attrition and with few
+## other variables. may be one of top 3
+## chosen as significant factor
+
+```
+
+
+### Stepwise Regression Analysis:
+### Top 3 variables versus Attrition for kNN analysis:
+
+#### Years At Company (top)
+#### Years in Current Role
+#### Age
+
+#### Top 4th variable:
+#### YearsSinceLastPromotion
+
+
+Use R-Square to identify top 3:
+
+Age .476
+Job Satisfaction .03
+Years At Company .74
+Job Involvement .05, .043 adjusted
+Relationship Satisfaction --
+Years Since Last Promotion .436 
+Stock Option Level .03
+Work Life Balance .02
+Performance Rating --
+Distance from Home .02
+Training Times Last Year .046, adjusted .024
+Education Level .07 -> no association with attrition
+Years in Current Role .63
+
+
+### Perform a kNN Classifier analysis on Attrition
+### In Model, use top 4 factors contributing to attrition:
+### (1)Years at Company, (2)Years in Current Role, (3)Age, (4)Years Since Last Promotion
+
+```{r}
+
+df<-attrition
+df = df %>% filter(Attrition == "Yes" | Attrition == "No")
+splitPerc = .70
+trainIndices = sample(1:dim(df)[1],round(splitPerc * dim(df)[1]))
+train = df[trainIndices,]
+test = df[-trainIndices,]
+
+```
+
+
+## kNN Analysis 
+### Conduct the k-NN analysis and include Confusion Matrix
+```{r}
+## What does a confusion matrix tell you:
+## "It is a summary of prediction results on a 
+## classification problem. The number of correct and
+## incorrect predictions are summarized with count values 
+## and broken down by each class. This is the key to the 
+## confusion matrix. The confusion matrix shows the ways 
+## in which your classification model is confused when it 
+## makes predictions. It gives you insight not only into 
+## the errors being made by your classifier but more 
+## importantly the types of errors that are being made.
+## It is this breakdown that overcomes the limitation 
+## of using classification accuracy alone."-machinelearningmastery.com
+
+## Get the probabilities
+## A confusion matrix is a summary of prediction results 
+## on a classification problem.
+## tes run at k=15
+set.seed(2040) #for reproducibility
+classifications = knn(train[,c(1,19:21)],test[,c(1,19:21)],train$Attrition, prob = TRUE, k=15)
+levels = rev(test$Attrition)
+table(test$Attrition,classifications)
+confusionMatrix(table(test$Attrition,classifications))
+```
+
+
+### Do reverse levels for confusion matrix table
+
+```{r}
+df$Attrition <- fct_rev(df$Attrition)
+levels(df$Attrition)
+```
+
+## kNN Analysis - continued
+### re-run k=15 with Type reversed
+```{r}
+set.seed(2040) #for reproducibility
+classifications = knn(train[,c(1,19:21)],test[,c(1,19:21)],train$Attrition, prob = TRUE, k=15)
+levels = rev(test$Attrition)
+table(test$Attrition,classifications)
+confusionMatrix(table(test$Attrition,classifications))
+```
+```{r}
+## conduct a binomial test to check probability of prediction accuracy
+bi.test <- binom.test(218, 261)
+bi.test
+## proability of success = ~84%
+
+```
+
+## Obtain optimal k value for the kNN model
+### Optimal k appears to be k=29
+
+```{r}
+type_accuracy <- data.frame(accuract=numeric(75), k=numeric(75))
+for (iter in 1:75) {
+  type_class <- knn(train[,c(1,19:21)], test[c(1,19:21)],
+                     train$Attrition,
+                     prob=TRUE, k=iter)
+  table(test$Attrition, type_class)
+  cm <- confusionMatrix(table(test$Attrition, type_class))
+  type_accuracy$accuracy[iter] <- cm$overall[1]
+  type_accuracy$k[iter] <- iter
+}
+
+## plot of optimal k
+par(mfrow=c(2,2)) #reset graphics device 
+renderPlotly({figure <- plot_ly(type_accuracy, x=type_accuracy$k, y=type_accuracy$accuracy, 
+              type="scatter", mode="lines")
+figure <- figure %>% layout(title='Optimal k for Model',
+            xaxis = list(title = 'K value',
+                          zeroline=TRUE),
+            yaxis = list(title = 'Accuracy'))
+figure})
+
+
+## Optimal k appears to be 29
+
+```
+
+## Verify the root mean squared error (RMSE) is less than 3000
+## rmse(.8544,.9864) = .132
+```{r}
+## library(Metrics)
+## rmse(.8544,.9864) = .132
+
+```
+
+```{r}
+## correlation analysis
+## library(Hmisc)
+dfcor<-df
+
+## Correlate Age and Attrition
+dfcor$Attrition<-as.numeric(dfcor$Attrition)
+cor(dfcor$Age, dfcor$Attrition)
+```
+```{r}
+
+## Correlate Years at Company and Attrition
+cor(dfcor$YearsAtCompany, dfcor$Attrition)
+```
+```{r}
+
+## Correlate Years in Current Role and Attrition
+cor(dfcor$YearsInCurrentRole, dfcor$Attrition)
+```
+```{r}
+
+## Correlate Years Since Last Promotion and Attrition
+cor(dfcor$YearsSinceLastPromotion, dfcor$Attrition)
+```
+
+### Visualize correlations
+
+```{r}
+
+## Correlation plot of data
+par(mfrow=c(2,2)) #reset graphics device 
+
+renderPlot({
+    GGally::ggpairs(attrition, columns = 19:21, ggplot2::aes(colour=Attrition)) +  ggtitle("Correlation Plot of Attrition vs Top 3 Variables") 
+})
+
+## Correlation plot of data (non-render code)
+## par(mfrow=c(2,2)) #reset graphics device 
+## ggpairs(attrition, columns = 19:21, ggplot2::aes(colour=Attrition)) +  
+## ggtitle("Correlation Plot of Attrition vs Top 3 Variables") 
+```
+
+## Conclusion of Overall Problem Analysis:
+
+### AIC stepwise regression modelling identified four variables with r-square indicators showing strong association with Attrition variable. A k Nearest Neighbors analysis provided prediction accuracy at 85% for associating four key variables of Age, Years at Company, Years in Current Role, and Years Since Last Promotion with Attrition. The classification model shows a sensitivity of 86% and specificity of 82%. Further, a 95% confidence interval of 81% to 90% suggests the model is fairly accurate in predicting Attrition. With a No Information Rate of 96%, we can pick the majority class of "No" and expect to be accurate.  Finally, a binomial test was performed to confirm the model and was found to have a probability of ~84% in predicting success. With all of this mind then, we can predict that the Company will experience less attrition in new employees.  Given the key indicators identified as contributing to attrition, positive succession planning approaches should be adopted to ensure more experienced exiting employees will share the knowledge with new hires. 
